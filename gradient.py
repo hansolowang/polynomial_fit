@@ -2,6 +2,7 @@ import jax
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
 
+# some sort of notion of what the environment. Use a function to generate the objectives.
 x = jnp.array([0.0, 1.0, 2.0, 3.0, 4.0])
 y = jnp.array([1.0, -20.0, 10., -5., -10.])
 
@@ -10,12 +11,19 @@ def DesignSearch(design, grads, lr):
     design = design - lr * grads
     return design
 
-def DesignSimulation(design, x):
+def DesignEmbedding(design):
+    return lambda x: jnp.polyval(design, x)
+
+def DesignSimulation(design_embedding, x):
     """
     Reconstruct low dimension representation to high level representation
     """
-    state = jnp.polyval(design, x)
+    state = design_embedding(x)
     return state
+
+def ObjectiveFunction(state, y):
+    """passed into DesignEvaluation"""
+    pass
 
 def DesignEvaluation(state, x, y, design):
     """Calculate the values of objectives and constraints"""
@@ -34,6 +42,9 @@ def DesignEvaluation(state, x, y, design):
 design = jnp.zeros(4)
 lr = 1e-4
 epochs = 100000
+
+
+# make this a function
 for epoch in range(epochs):
     state = DesignSimulation(design, x)
     obj_loss, grads = DesignEvaluation(state, x, y, design)
@@ -46,7 +57,6 @@ for epoch in range(epochs):
         print(epoch)
         print(jnp.sum(grads), design)
         break
-
 
 xnew = jnp.linspace(x[0], x[-1], 1000)
 plt.plot(x, y, 'bo')

@@ -1,56 +1,47 @@
-from dataclasses import dataclass
+import jax
+import jax.numpy as jnp
 import matplotlib.pyplot as plt
-import numpy as np
-from numpy.polynomial.polynomial import Polynomial
-from scipy.optimize import curve_fit
-from enum import Enum
 
-@dataclass
-class Objectives:
-    x: np.ndarray
-    y: np.ndarray
 
-def DesignSearch(design: np.ndarray, gradient_vector: np.ndarray=None) -> np.ndarray:
+x = jnp.array([0.0, 1.0, 2.0, 3.0, 4.0])
+y = jnp.array([1.0, -20.0, 10., -5., -10.])
+
+def DesignSearch(design, grads, lr):
     """Improve low dimension representation"""
-    design += 0.0001 * gradient_vector
+    design = design - lr * grads
     return design
 
-def DesignSimulation(design: np.ndarray):
+def DesignSimulation(design, x):
     """
     Reconstruct low dimension representation to high level representation
     """
-    def f(x):
-        return sum(x**idx*val for idx, val in enumerate(design))
-    return f
-#     return np.polynomial.polynomial.Polynomial(design)
+    return jnp.polyval(design, x)
 
-def DesignEvaluation(model: np.ndarray, obj: Objectives, constraints=None) ->np.ndarray:
+def DesignEvaluation(design, x, y):
     """Calculate the values of objectives and constraints"""
-    # plot
-    loss = 0
-    for x,y in zip(obj.x, obj.y):
-        loss += (model(x) - y)**2
-    return loss
+    def loss_fn(design, x, y):
+        preds = jnp.polyval(design, x)
+        return jnp.mean((preds - y)**2)
+    val = loss_fn(design, x, y)
+    grads = jax.grad(loss_fn)(design, x, y)
+    return val, grads
 
-#    xnew = np.linspace(obj.x[0], obj.x[-1], 1000)
-#    plt.plot(obj.x, obj.y, 'bo')
-#    plt.plot(xnew, model(xnew))
-#    plt.show()
+design = jnp.zeros(4)
+lr = 1e-4
+epochs = 100000
+for epoch in range(epochs):
+    val, grads = DesignEvaluation(design, x, y)
+    design = DesignSearch(design, grads, lr)
+    if epoch % 100 == 0:
+        print(jnp.sum(grads), design)
+    # break if nan or gradient is trivial
+    if any(jnp.isnan(grads)) or abs(jnp.sum(grads)) < .01:
+        print(epoch)
+        print(jnp.sum(grads), design)
+        break
 
-def DesignGradient(model, objectives):
-    return np.array([grad_a, grad_b, grad_c, grad_d])
 
-x = np.array([0.0, 1.0, 2.0, 3.0, 4.0])
-y = np.array([1.0, -20.0, 10., -5., -10.])
-objs = Objectives(x, y)
-
-design=np.array([0.0, 0.0, 0.0, 0.0])
-grads = np.array([0.0, 0.0, 0.0, 0.0])
-
-for i in range(100):
-    design = DesignSearch(design, grads)
-    model = DesignSimulation(design)
-    loss = DesignEvaluation(model, objs)
-    grads = DesignGradient(model, objs)
-    print(f"loss:{loss} grads:{grads} grad_norm: {sum(grads)}")
-DesignEvaluation(model, objs)
+xnew = jnp.linspace(x[0], x[-1], 1000)
+plt.plot(x, y, 'bo')
+plt.plot(xnew, DesignSimulation(design, xnew))
+plt.show()

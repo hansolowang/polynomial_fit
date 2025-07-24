@@ -25,6 +25,12 @@ def ObjectiveFunction(state, y):
     """passed into DesignEvaluation"""
     pass
 
+def ObjectiveFunction(state, y):
+    return jnp.mean((state - y) ** 2)
+
+def DesignEvaluation2(objective_function, state, y):
+    return objective_function(state, y)
+
 def DesignEvaluation(state, x, y, design):
     """Calculate the values of objectives and constraints"""
 
@@ -46,12 +52,18 @@ epochs = 100000
 
 # make this a function
 for epoch in range(epochs):
+    """
+    val = DesignEvaluation(DesignObjective(DesignSimulation(DesignEmbedding(design))))
+    grad = Grad(DesignEvaluation(DesignObjective(DesignSimulation(DesignEmbedding(design)))))
+    design = DesignSearch(design, val, grad)
+    """
     state = DesignSimulation(DesignEmbedding(design), x)
     obj_loss, grads = DesignEvaluation(state, x, y, design)
     design = DesignSearch(design, grads, lr)
 
+    # print 
     if epoch % 100 == 0:
-        print(obj_loss, sum(grads))
+        print(obj_loss, sum(grads), obj_loss2)
     # break if nan or gradient is trivial
     if any(jnp.isnan(grads)) or abs(jnp.sum(grads)) < .01:
         print(epoch)

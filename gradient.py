@@ -46,7 +46,7 @@ epochs = 100000
 
 # make this a function
 for epoch in range(epochs):
-    state = DesignSimulation(design, x)
+    state = DesignSimulation(DesignEmbedding(design), x)
     obj_loss, grads = DesignEvaluation(state, x, y, design)
     design = DesignSearch(design, grads, lr)
 

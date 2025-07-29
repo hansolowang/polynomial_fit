@@ -6,15 +6,22 @@ grad = Grad(DesignEvaluation(DesignObjective(DesignSimulation(DesignEmbedding(de
 design = DesignSearch(design, val, grad)
 """
 
+DesignVector = np.ndarray
+RobotSystem = "high level representation"
+SimulationStates = "time varying simulation state"
+RobotSystemConstraint = "physical constraint data structure"
+SimulationStateConstraint = "simulation state constraint data structure"
 
-def DesignEmbedding():
-    pass
 
-def DesignSimulation():
-    pass
 
-def DesignObjective():
-    pass
+def DesignEmbedding(DesignVector):
+    return RobotSystem
+
+def DesignSimulation(RobotSystem):
+    return SimulationStates
+
+def DesignObjective(RobotSystem or SimulationStates):
+    return np.ndarray
 
 def DesignConstraint():
     pass

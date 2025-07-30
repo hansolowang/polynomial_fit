@@ -1,14 +1,29 @@
 from dataclasses import dataclass
+import equinox as eqx
+from functools import partial
 import jax
 import jax.numpy as jnp
 import numpy as np
 import matplotlib.pyplot as plt
 
-@dataclass
-class Objective:
-    x: float
+"""
+val = DesignEvaluation(DesignObjective(DesignSimulation(DesignEmbedding(design))))
+grad = Grad(DesignEvaluation(DesignObjective(DesignSimulation(DesignEmbedding(design)))))
+design = DesignSearch(design, val, grad)
+"""
+class Objective(eqx.Module):
+    x: int = eqx.field(static=True)
     y: float
 
+class DesignConstraints(eqx.Module):
+    x: int = eqx.field(static=True)
+    upper_bound: float
+    lower_bound: float
+
+class StateConstraints(eqx.Module):
+    x: int = eqx.field(static=True)
+    upper_bound: float
+    lower_bound: float
 
 obj0 = Objective(0, 1.0)
 obj1 = Objective(1, -20.0)
@@ -28,6 +43,7 @@ def DesignSearch(design, grads, lr):
     design = design - lr * grads
     return design
 
+
 def DesignEmbedding(design):
     return lambda x: jnp.polyval(design, x)
 
@@ -39,51 +55,41 @@ def DesignSimulation(design_embedding, x):
     state = design_embedding(x)
     return state
 
+
 def ObjectiveFunction(state, objs: list[Objective]):
     """passed into DesignEvaluation"""
     loss = 0
     for obj in objs:
-        loss += (state[obj.x] - y) ** 2
+        loss += (state[obj.x] - obj.y) ** 2
     return loss
 
-# def ObjectiveFunction(state, y):
-#     return jnp.mean((state - y) ** 2)
 
-def ConstraintFunction():
-    """constraint on embedding result or simulation result"""
+@jax.jit
+def DesignEvaluation(objs, state):
+    loss_val = ObjectiveFunction(state, objs)
+    return loss_val
+
+@jax.jit
+def GradDesignEvaluation(design, objs, horizon):
+    state = jnp.polyval(design, horizon)
+    loss = 0.0
+    for obj in objs:
+        loss += (state[obj.x] - obj.y) ** 2
+    return loss
 
 
-def DesignEvaluation2(objective_function, state, y):
-    return objective_function(state, y)
-
-def DesignEvaluation(state, objectives, design):
-    """Calculate the values of objectives and constraints"""
-    def loss_fn(state, y):
-        return jnp.mean((state - y)**2)
-    obj_loss = loss_fn(state, y)
-    # Hmmmm
-    def loss_fn_for_gradient(design, x, y):
-        preds = jnp.polyval(design, x)
-        return jnp.mean((preds - y)**2)
-    grads = jax.grad(loss_fn_for_gradient)(design, x, y)
-
-    return obj_loss, grads
-
-design = jnp.zeros(4)
-lr = 5e-4
-epochs = 50000
+design = jnp.zeros(4, dtype='float32')
+lr = 1e-6
+epochs = 5000
 
 
 # make this a function
 for epoch in range(epochs):
-    """
-    val = DesignEvaluation(DesignObjective(DesignSimulation(DesignEmbedding(design))))
-    grad = Grad(DesignEvaluation(DesignObjective(DesignSimulation(DesignEmbedding(design)))))
-    design = DesignSearch(design, val, grad)
-    """
-    horizon = np.linspace(0, 100, 101)
+    horizon = np.linspace(0, 5, 6)
     state = DesignSimulation(DesignEmbedding(design), horizon)
-    obj_loss, grads = DesignEvaluation(state, x, y, design)
+    obj_loss = DesignEvaluation(objectives, state)
+    f_grad = jax.grad(partial(GradDesignEvaluation, objs=objectives, horizon=horizon))
+    grads = f_grad(design)
     design = DesignSearch(design, grads, lr)
 
     # print objective and gradient sum
@@ -94,7 +100,7 @@ for epoch in range(epochs):
         print(epoch, jnp.sum(grads), design)
         break
 
-xnew = jnp.linspace(x[0], x[-1], 1000)
-plt.plot(x, y, 'bo')
+xnew = jnp.linspace(horizon[0], horizon[-1], 1000)
+plt.plot([o.x for o in objectives], [o.y for o in objectives], 'bo')
 plt.plot(xnew, DesignSimulation(DesignEmbedding(design), xnew))
 plt.show()

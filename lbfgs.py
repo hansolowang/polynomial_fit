@@ -33,7 +33,7 @@ obj4 = Objective(4, -10.0)
 # some sort of notion of what the environment. Use a function to generate the objectives.
 objectives = [obj0, obj1, obj2, obj3, obj4]
 
-def DesignSearch(design, grads, lr)s:
+def DesignSearch(design, grads, lr):
     """Improve low dimension representation"""
     design = design - lr * grads
     return design
@@ -60,31 +60,30 @@ def ObjectiveFunction(state, objs: list[Objective]):
 
 
 @jax.jit
-def DesignEvaluation(objs, state):
+def DesignEvaluation(state, objs):
     loss_val = ObjectiveFunction(state, objs)
     return loss_val
 
 @jax.jit
-def GradDesignEvaluation(design, objs, horizon):
-    state = jnp.polyval(design, horizon)
-    loss = 0.0
-    for obj in objs:
-        loss += (state[obj.x] - obj.y) ** 2
-    return loss
+def GradDesignEvaluation(design, horizon, objs):
+    def f(design):
+        state = jnp.polyval(design, horizon)
+        loss = 0.0
+        for obj in objs:
+            loss += (state[obj.x] - obj.y) ** 2
+        return loss
+    return jax.grad(f)(design)
 
 
 design = jnp.zeros(4, dtype='float32')
 lr = 1e-6
 epochs = 5000
 
-
 # make this a function
 for epoch in range(epochs):
     horizon = np.linspace(0, 5, 6)
-    state = DesignSimulation(DesignEmbedding(design), horizon)
-    obj_loss = DesignEvaluation(objectives, state)
-    f_grad = jax.grad(partial(GradDesignEvaluation, objs=objectives, horizon=horizon))
-    grads = f_grad(design)
+    obj_loss = DesignEvaluation(DesignSimulation(DesignEmbedding(design), horizon), objectives)
+    grads = GradDesignEvaluation(design, horizon, objectives)
     design = DesignSearch(design, grads, lr)
 
     # print objective and gradient sum

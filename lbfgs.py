@@ -58,7 +58,6 @@ def ObjectiveFunction(state, objs: list[Objective]):
         loss += (state[obj.x] - obj.y) ** 2
     return loss
 
-
 @jax.jit
 def DesignEvaluation(state, objs):
     loss_val = ObjectiveFunction(state, objs)
@@ -74,6 +73,11 @@ def GradDesignEvaluation(design, horizon, objs):
         return loss
     return jax.grad(f)(design)
 
+def val_and_grad(design, horizon, objectives):
+    obj_loss = DesignEvaluation(DesignSimulation(DesignEmbedding(design), horizon), objectives)
+    grads = GradDesignEvaluation(design, horizon, objectives)
+    return obj_loss, grads
+
 
 design = jnp.zeros(4, dtype='float32')
 lr = 1e-6
@@ -82,8 +86,7 @@ epochs = 5000
 # make this a function
 for epoch in range(epochs):
     horizon = np.linspace(0, 5, 6)
-    obj_loss = DesignEvaluation(DesignSimulation(DesignEmbedding(design), horizon), objectives)
-    grads = GradDesignEvaluation(design, horizon, objectives)
+    obj_loss, grads = val_and_grad(design, horizon, objectives)
     design = DesignSearch(design, grads, lr)
 
     # print objective and gradient sum

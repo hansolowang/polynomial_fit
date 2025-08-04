@@ -1,4 +1,4 @@
-def 
+from abc import ABC, abstractmethod
 
 """
 val = DesignEvaluation(DesignObjective(DesignSimulation(DesignEmbedding(design))))
@@ -6,35 +6,38 @@ grad = Grad(DesignEvaluation(DesignObjective(DesignSimulation(DesignEmbedding(de
 design = DesignSearch(design, val, grad)
 """
 
-DesignVector = np.ndarray
-RobotSystem = "high level representation"
-SimulationStates = "time varying simulation state"
-RobotSystemConstraint = "physical constraint data structure"
-SimulationStateConstraint = "simulation state constraint data structure"
+# DesignVector = np.ndarray
+# RobotSystem = "high level representation"
+# SimulationStates = "time varying simulation state"
+# RobotSystemConstraint = "physical constraint data structure"
+# SimulationStateConstraint = "simulation state constraint data structure"
+class DesignEmbedding(ABC):
+    @abstractmethod
+    def __call__(self, x):
+        ...
 
 
-
-def DesignEmbedding(DesignVector):
-    return RobotSystem
-
-def DesignSimulation(RobotSystem):
-    return SimulationStates
-
-def DesignObjective(RobotSystem or SimulationStates):
-    return np.ndarray
-
-def DesignConstraint():
-    pass
-
-def DesignEvaluation():
-    pass
-
-def DesignSearch():
-    pass
+class DesignSimulation(ABC):
+    @abstractmethod
+    def __call__(self, embedding, horizon):
+        ...
 
 
-# make this a function
-for epoch in range(epochs):
-    val = DesignEvaluation(DesignObjective(DesignSimulation(DesignEmbedding(design))), DesignConstraint(DesignSimulation(DesignEmbedding(design))))
-    grad = Grad(DesignEvaluation(DesignObjective(DesignSimulation(DesignEmbedding(design)))), DesignConstraint(DesignSimulation(DesignEmbedding(design))))
-    design = DesignSearch(design, val, grad)
+class DesignEvaluation(ABC):
+    def __init__(self, objectives, f_sim):
+        self.objectives = objectives
+
+    def val(self, state):
+        loss = 0
+        for obj in objectives:
+            loss += (state[obj.x] - obj.y) ** 2
+        return loss
+
+    @abstractmethod
+    def grad(self, x, objectives):
+        ...
+
+
+class DesignSearch(ABC):
+    def search(self, x, grads, lr):
+         return x - lr * grads

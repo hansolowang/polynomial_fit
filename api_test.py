@@ -75,7 +75,6 @@ def GradDesignEvaluation(design, horizon, objs):
     return jax.grad(f)(design)
 
 
-
 design = jnp.zeros(4, dtype='float32')
 lr = 1e-6
 epochs = 5000

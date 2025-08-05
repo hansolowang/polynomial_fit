@@ -18,11 +18,11 @@ class SimQuadraticFunction(DesignSimulation):
 
 
 class EvalQuadraticFunction(DesignEvaluation):
-    def grad(self, x, objectives):
+    def grad(self, x, horizon):
         def f(design):
             state = jnp.polyval(design, horizon)
             loss = 0.0
-            for obj in objectives:
+            for obj in self.objectives:
                 loss += (state[obj.x] - obj.y) ** 2
             return loss
 
@@ -48,13 +48,16 @@ horizon = np.linspace(0, 5, 6)
 lr = 1e-3
 epochs = 500
 
+embedding_module = EmbedQuadraticFunction()
+sim_module = SimQuadraticFunction()
+eval_module = EvalQuadraticFunction(objectives)
 design_search = DesignSearch()
 
 for epoch in range(epochs):
-    f = EmbedQuadraticFunction(design)
-    state = SimQuadraticFunction(f, horizon)
-    val = EvalQuadraticFunction().val(state, objectives)
-    grads = EvalQuadraticFunction().grad(design, objectives)
+    embedding = embedding_module(design)
+    state = sim_module(embedding, horizon)
+    val = eval_module.val(state=state)
+    grads = eval_module.grad(x=design, horizon=horizon)
     design = design_search.search(design, grads, lr)
 
     # print objective and gradient sum

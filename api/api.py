@@ -25,22 +25,12 @@ class DesignSimulation(ABC):
 
 
 class DesignEvaluation(ABC):
-    def __init__(self, objectives, f_sim):
+    def __init__(self, objectives):
         self.objectives = objectives
 
-    def __call__(self, mode):
-        if mode == "val":
-            return self.val()
-        elif mode == "grad":
-            return self.grad()
-        elif mode == "val_grad":
-            return self.val(), self.grad()
-        else:
-            NotImplementedError
-
-    def val(self):
+    def val(self, state):
         loss = 0
-        for obj in objectives:
+        for obj in self.objectives:
             loss += (state[obj.x] - obj.y) ** 2
         return loss
 

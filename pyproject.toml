@@ -1,0 +1,32 @@
+[project]
+name = "api"
+version = "0.1.0"
+description = "Make design run at the speed of thought."
+dependencies = [
+    "equinox==0.11.5",
+    "matplotlib==3.9.2",
+    "numpy==2.1.1",
+    "jax==0.4.31",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit",
+    "pytest",
+    "pytest-mock",
+    "ruff",
+]
+
+[tool.setuptools]
+packages = ["api"]
+
+[tool.ruff]
+ignore = ["D103", "D405"]
+
+[tool.ruff.lint]
+select = [
+    "UP", # pyupgrade
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"

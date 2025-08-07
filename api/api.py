@@ -1,4 +1,6 @@
+from datacasses import dataclass
 from abc import ABC, abstractmethod
+import jax
 
 """
 val = DesignEvaluation(DesignObjective(DesignSimulation(DesignEmbedding(design))))
@@ -7,37 +9,48 @@ design = DesignSearch(design, val, grad)
 """
 
 
-# DesignVector = np.ndarray
-# RobotSystem = "high level representation"
-# SimulationStates = "time varying simulation state"
-# RobotSystemConstraint = "physical constraint data structure"
-# SimulationStateConstraint = "simulation state constraint data structure"
 class DesignEmbedding(ABC):
     @abstractmethod
     def __call__(self, x):
         ...
 
+    # Maybe a seperate method instead of __call__
+    # def generate():
+
 
 class DesignSimulation(ABC):
     @abstractmethod
-    def __call__(self, embedding, horizon):
+    def __call__(self, embedding, sim_aux_data):
         ...
+
+    # Maybe a seperate instead of __call__
+    # def simulate():
 
 
 class DesignEvaluation(ABC):
     def __init__(self, objectives):
         self.objectives = objectives
 
-    def val(self, state):
-        loss = 0
-        for obj in self.objectives:
-            loss += (state[obj.x] - obj.y) ** 2
-        return loss
-
-    def grad(self, x, objectives):
-        raise NotImplementedError
+    @abstractmethod
+    def __call__(self, state, eval_aux_data):
+        ...
 
 
 class DesignSearch(ABC):
-    def search(self, x, grads, lr):
-        return x - lr * grads
+    def __init__(self, value_function, grad_function):
+        self.value_function = value_function
+        self.gradient_function = grad_function
+
+    @abstractmethod
+    def search(self, x, search_aux_data):
+        ...
+
+
+# TODO: does horizon make sense as an argument here?
+def gradfunction(design_embedding, design_simulation, design_evaluation, sim_aux_data):
+    def f(design, eval_aux_data):
+        return design_evaluation(
+            design_simulation(design_embedding(design), sim_aux_data), eval_aux_data
+        )
+
+    return jax.grad(f)
